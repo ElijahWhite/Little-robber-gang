@@ -3,14 +3,58 @@ import random
 import heapq
 
 # Размер клетки
-CELL_SIZE = 10
+CELL_SIZE = 100
 
 # Загрузка спрайтов клеток
-FIELD = pygame.image.load("images/map/field/image2.png")
-ROAD = pygame.image.load("images/map/road/image2.png")
-FOREST = pygame.image.load("images/map/forest/image2.png")
-CITY = pygame.image.load("images/map/city/image2.png")
+FIELD = pygame.image.load("images/map/field/grass.jpg")
+ROAD = pygame.image.load("images/map/road/road.jpg")
+FOREST = pygame.image.load("images/map/forest/forest.jpg")
+CITY = pygame.image.load("images/map/city/old_city.jpg")
 
+def heuristic(a, b):
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def a_star_search(map_data, start, goal):
+    frontier = []
+    heapq.heappush(frontier, (0, start))
+    came_from = {start: None}
+    cost_so_far = {start: 0}
+
+    while frontier:
+        current = heapq.heappop(frontier)[1]
+
+        if current == goal:
+            break
+
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+
+                next = (current[0] + dx, current[1] + dy)
+
+                if 0 <= next[0] < len(map_data[0]) and 0 <= next[1] < len(map_data):
+                    new_cost = cost_so_far[current] + 1
+                    if next not in cost_so_far or new_cost < cost_so_far[next]:
+                        cost_so_far[next] = new_cost
+                        priority = new_cost + heuristic(goal, next)
+                        heapq.heappush(frontier, (priority, next))
+                        came_from[next] = current
+
+    return came_from, cost_so_far
+
+def connect_cities(map_data, cities):
+    for i in range(len(cities)):
+        for j in range(i + 1, len(cities)):
+            came_from, _ = a_star_search(map_data, cities[i], cities[j])
+
+            current = cities[j]
+            while current != cities[i]:
+                if map_data[current[1]][current[0]] != CITY:
+                    map_data[current[1]][current[0]] = ROAD
+                current = came_from[current]
+
+#Генерация карты
 def generate_map(a, b, c):
     map_data = [[FIELD for _ in range(a)] for _ in range(b)]
 
@@ -30,71 +74,9 @@ def generate_map(a, b, c):
                 if (x, y) not in cities and x >= 0 and x < a and y >= 0 and y < b:
                     map_data[y][x] = CITY
 
-    # Константы
-    CITY_CELL = 1
-    ROAD_CELL = 2
+    # Соединение городов
 
-    # Поиск кратчайшего пути между городами
-    def shortest_path(map_data, cities, city1, city2):
-        # Создаем матрицу расстояний между городами
-        dist = [[float('inf') for _ in range(len(cities))] for _ in range(len(cities))]
-        for i, city1 in enumerate(cities):
-            for j, city2 in enumerate(cities):
-                if i == j:
-                    dist[i][j] = 0
-                elif dist[j][i] < float('inf'):
-                    dist[i][j] = dist[j][i]
-                else:
-                    dist[i][j] = abs(city1[0] - city2[0]) + abs(city1[1] - city2[1])
-
-        # Выполняем поиск кратчайшего пути с помощью алгоритма Дейкстры
-        heap = [(0, i) for i in range(len(cities))]
-        heapq.heapify(heap)
-        visited = set()
-        while heap:
-            (d, u) = heapq.heappop(heap)
-            if u == city2:
-                return d
-            if u in visited:
-                continue
-            visited.add(u)
-            for v in range(len(cities)):
-                if v != u:
-                    alt = d + dist[u][v]
-                    if alt < float('inf'):
-                        heapq.heappush(heap, (alt, v))
-
-        return None
-
-    # Соединение городов дорогами
-    def connect_cities(map_data, cities, max_distance):
-        for i in range(len(cities)):
-            for j in range(i + 1, len(cities)):
-                if shortest_path(map_data, cities, i, j) <= max_distance:
-                    # Соединяем города дорогой
-                    city1 = cities[i]
-                    city2 = cities[j]
-                    x1, y1 = city1
-                    x2, y2 = city2
-                    dx = x2 - x1
-                    dy = y2 - y1
-                    if dx != 0:
-                        stepx = dx // abs(dx)
-                    else:
-                        stepx = 0
-                    if dy != 0:
-                        stepy = dy // abs(dy)
-                    else:
-                        stepy = 0
-                    x = x1
-                    y = y1
-                    while x != x2 or y != y2:
-                        if map_data[y][x] != CITY_CELL:
-                            map_data[y][x] = ROAD_CELL
-                        x += stepx
-                        y += stepy
-                    if map_data[y2][x2] != CITY_CELL:
-                        map_data[y2][x2] = ROAD_CELL
+    connect_cities(map_data, cities)
 
     # Размещение лесов
     forest_count = int(a * b * 0.25)  # Заполняем 25% карты лесами

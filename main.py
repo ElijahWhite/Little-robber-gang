@@ -8,8 +8,8 @@ from map import CITY
 from map import CELL_SIZE
 
 # Размеры окна
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
+WINDOW_WIDTH = 1200
+WINDOW_HEIGHT = 800
 
 # Создаем окно
 pygame.init()
@@ -27,9 +27,9 @@ camera_y = 0
 camera_speed = 1
 
 # Создание карты
-a = 100
-b = 100
-c = 10
+a = 30
+b = 30
+c = 4
 map_data = generate_map(a, b, c)
 
 # Определяем количество тайлов по горизонтали и вертикали
